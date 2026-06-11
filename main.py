@@ -65,12 +65,24 @@ def setup_normal():
 
 
 def setup_comparacion():
-    m = crear_matriz(COMP_FILAS, COMP_COLUMNAS)
-    generar_obstaculos(m, COMP_INICIO, COMP_META)
-    ca, ea, ta = ejecutar_astar(m, COMP_INICIO, COMP_META)
-    reset_nodos(m)
-    cb, eb, tb = ejecutar_bfs(m, COMP_INICIO, COMP_META)
-    return m, ca, ea, ta, cb, eb, tb
+    # 1. Creamos la matriz base para A* con sus obstáculos
+    m_astar = crear_matriz(COMP_FILAS, COMP_COLUMNAS)
+    generar_obstaculos(m_astar, COMP_INICIO, COMP_META)
+    
+    # 2. Creamos una matriz espejo limpia para BFS
+    m_bfs = crear_matriz(COMP_FILAS, COMP_COLUMNAS)
+    
+    # 3. Clonamos exactamente el mapa de obstáculos para que sea el mismo escenario
+    for f in range(COMP_FILAS):
+        for c in range(COMP_COLUMNAS):
+            m_bfs[f][c].caminable = m_astar[f][c].caminable
+
+    # 4. Cada algoritmo corre en su propia estructura independiente
+    ca, ea, ta = ejecutar_astar(m_astar, COMP_INICIO, COMP_META)
+    cb, eb, tb = ejecutar_bfs(m_bfs, COMP_INICIO, COMP_META)
+    
+    # Retornamos m_astar para el renderizado (ambas estructuras de paredes son idénticas)
+    return m_astar, ca, ea, ta, cb, eb, tb
 
 
 def reiniciar_estado():
@@ -126,19 +138,31 @@ def main():
                 )
 
                 if btn1_rect.collidepoint(event.pos):
+                    # Regeneramos la matriz principal (que usaremos para A*)
                     regenerar_mapa(matriz, inicio_pos, meta_pos)
+                    
                     if modo_comparacion:
+                        # Ejecutamos A* en la matriz principal
                         camino_astar, explorados_astar, tiempo_astar = ejecutar_astar(
                             matriz, inicio_pos, meta_pos
                         )
-                        reset_nodos(matriz)
+                        
+                        # Creamos una matriz espejo para BFS en tiempo de ejecución
+                        matriz_bfs = crear_matriz(COMP_FILAS, COMP_COLUMNAS)
+                        for f in range(COMP_FILAS):
+                            for c in range(COMP_COLUMNAS):
+                                matriz_bfs[f][c].caminable = matriz[f][c].caminable
+                                
+                        # Ejecutamos BFS en su entorno aislado
                         camino_bfs, explorados_bfs, tiempo_bfs = ejecutar_bfs(
-                            matriz, inicio_pos, meta_pos
+                            matriz_bfs, inicio_pos, meta_pos
                         )
                     else:
+                        # Modo normal: solo nos interesa A*
                         camino_astar, explorados_astar, tiempo_astar = ejecutar_astar(
                             matriz, inicio_pos, meta_pos
                         )
+                        
                     batch_a, batch_b = calcular_batches(
                         explorados_astar, explorados_bfs, modo_comparacion
                     )

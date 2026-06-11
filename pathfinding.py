@@ -114,9 +114,10 @@ def mapeo_bfs(matriz, inicio_pos, meta_pos):
     meta = matriz[meta_pos[0]][meta_pos[1]]
 
     cola = [inicio]
-    visitados = {inicio.posicion}
+    visitados = []  # lista, no set - igual que A* usa listaCerrada (O(n) en in)
     explorados = []
     inicio.padre = None
+    visitados.append(inicio)
 
     while cola:
         nodo_actual = cola.pop(0)
@@ -139,8 +140,8 @@ def mapeo_bfs(matriz, inicio_pos, meta_pos):
             if 0 <= nueva_fila < filas and 0 <= nueva_col < columnas:
                 vecino = matriz[nueva_fila][nueva_col]
 
-                if vecino.caminable and vecino.posicion not in visitados:
-                    visitados.add(vecino.posicion)
+                if vecino.caminable and vecino not in visitados:  # O(n), igual que A*
+                    visitados.append(vecino)
                     vecino.padre = nodo_actual
                     cola.append(vecino)
 
