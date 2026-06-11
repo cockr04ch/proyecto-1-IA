@@ -16,6 +16,7 @@ from pathfinding import (
 from graphics import (
     init_pygame, load_sprites, draw_grid_normal,
     draw_comparison_view, draw_sidebar,
+    crear_superficie_calor,
 )
 
 
@@ -61,32 +62,24 @@ def setup_normal():
     m = crear_matriz(NORMAL_FILAS, NORMAL_COLUMNAS)
     generar_obstaculos(m, NORMAL_INICIO, NORMAL_META)
     c, e, t = ejecutar_astar(m, NORMAL_INICIO, NORMAL_META)
-    return m, c, e, t
+    heat = crear_superficie_calor(len(m), len(m[0]), NORMAL_CELL_SIZE)
+    return m, c, e, t, heat
 
 
 def setup_comparacion():
-    # 1. Creamos la matriz base para A* con sus obstáculos
     m_astar = crear_matriz(COMP_FILAS, COMP_COLUMNAS)
     generar_obstaculos(m_astar, COMP_INICIO, COMP_META)
-    
-    # 2. Creamos una matriz espejo limpia para BFS
+
     m_bfs = crear_matriz(COMP_FILAS, COMP_COLUMNAS)
-    
-    # 3. Clonamos exactamente el mapa de obstáculos para que sea el mismo escenario
     for f in range(COMP_FILAS):
         for c in range(COMP_COLUMNAS):
             m_bfs[f][c].caminable = m_astar[f][c].caminable
 
-    # 4. Cada algoritmo corre en su propia estructura independiente
     ca, ea, ta = ejecutar_astar(m_astar, COMP_INICIO, COMP_META)
     cb, eb, tb = ejecutar_bfs(m_bfs, COMP_INICIO, COMP_META)
-    
-    # Retornamos m_astar para el renderizado (ambas estructuras de paredes son idénticas)
-    return m_astar, ca, ea, ta, cb, eb, tb
 
-
-def reiniciar_estado():
-    return 0, 0, 0, 0
+    heat = crear_superficie_calor(len(m_astar), len(m_astar[0]), COMP_CELL_SIZE)
+    return m_astar, ca, ea, ta, cb, eb, tb, heat
 
 
 def main():
@@ -98,14 +91,14 @@ def main():
     inicio_pos = NORMAL_INICIO
     meta_pos = NORMAL_META
 
-    matriz, camino_astar, explorados_astar, tiempo_astar = setup_normal()
+    matriz, camino_astar, explorados_astar, tiempo_astar, heat_surf = setup_normal()
     camino_bfs = None
     explorados_bfs = []
     tiempo_bfs = 0.0
 
     batch_a, batch_b = calcular_batches(explorados_astar, explorados_bfs, modo_comparacion)
 
-    screen, clock, font, font_bold = init_pygame(ancho, alto)
+    screen, clock, font, font_bold, font_small = init_pygame(ancho, alto)
     zombie_sprite, raider_frames, raider_idle = load_sprites(cell_size)
 
     paso_astar = 0
@@ -162,7 +155,9 @@ def main():
                         camino_astar, explorados_astar, tiempo_astar = ejecutar_astar(
                             matriz, inicio_pos, meta_pos
                         )
-                        
+                    heat_surf = crear_superficie_calor(
+                        len(matriz), len(matriz[0]), cell_size
+                    )
                     batch_a, batch_b = calcular_batches(
                         explorados_astar, explorados_bfs, modo_comparacion
                     )
@@ -186,7 +181,7 @@ def main():
                         inicio_pos = COMP_INICIO
                         meta_pos = COMP_META
                         matriz, camino_astar, explorados_astar, tiempo_astar, \
-                            camino_bfs, explorados_bfs, tiempo_bfs = setup_comparacion()
+                            camino_bfs, explorados_bfs, tiempo_bfs, heat_surf = setup_comparacion()
                     else:
                         cell_size = NORMAL_CELL_SIZE
                         ancho = NORMAL_WINDOW_WIDTH
@@ -197,7 +192,7 @@ def main():
                         camino_bfs = None
                         explorados_bfs = []
                         tiempo_bfs = 0.0
-                        matriz, camino_astar, explorados_astar, tiempo_astar = setup_normal()
+                        matriz, camino_astar, explorados_astar, tiempo_astar, heat_surf = setup_normal()
                     batch_a, batch_b = calcular_batches(
                         explorados_astar, explorados_bfs, modo_comparacion
                     )
@@ -255,12 +250,14 @@ def main():
                 zombie_sprite, raider_frames, frame_anim,
                 frame_anim, raider_idle,
                 font, font_bold, tiempo_astar, tiempo_bfs,
+                heat_surf, font_small, mouse_pos,
             )
         else:
             draw_grid_normal(
                 screen, matriz, cell_size,
                 camino_astar, explorados_astar, revelados_astar, paso_astar,
                 zombie_sprite, raider_frames, frame_anim, raider_idle,
+                heat_surf, font_small,
             )
 
         total_a = len(camino_astar) if camino_astar else 0
