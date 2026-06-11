@@ -16,7 +16,8 @@ def init_pygame(ancho, alto):
     clock = pygame.time.Clock()
     font = pygame.font.SysFont("Arial", 16)
     font_bold = pygame.font.SysFont("Arial", 16, bold=True)
-    return screen, clock, font, font_bold
+    font_small = pygame.font.SysFont("Arial", 14)
+    return screen, clock, font, font_bold, font_small
 
 
 def load_sprites(cell_size):
@@ -43,41 +44,134 @@ def load_sprites(cell_size):
     return zombie_sprite, raider_frames, raider_idle
 
 
+def _color_calor(dist, max_dist):
+    t = 1.0 - (dist / max_dist) if max_dist > 0 else 1.0
+    base = (50, 50, 60)
+    calido = (75, 55, 40)
+    r = int(base[0] + (calido[0] - base[0]) * t)
+    g = int(base[1] + (calido[1] - base[1]) * t)
+    b = int(base[2] + (calido[2] - base[2]) * t)
+    return (r, g, b)
+
+
+def crear_superficie_calor(filas, columnas, cell_size):
+    grid_w = columnas * cell_size
+    grid_h = filas * cell_size
+    superficie = pygame.Surface((grid_w, grid_h))
+    meta = (filas - 1, columnas - 1)
+    max_dist = meta[0] + meta[1]
+    for f in range(filas):
+        for c in range(columnas):
+            dist = abs(f - meta[0]) + abs(c - meta[1])
+            color = _color_calor(dist, max_dist)
+            superficie.fill(color, (c * cell_size, f * cell_size, cell_size, cell_size))
+    return superficie
+
+
+def _dibujar_heuristicas(screen, font_small, matriz, cell_size, ox, oy):
+    filas = len(matriz)
+    columnas = len(matriz[0])
+    meta = (filas - 1, columnas - 1)
+    for f in range(filas):
+        for c in range(columnas):
+            if not matriz[f][c].caminable:
+                continue
+            h = abs(f - meta[0]) + abs(c - meta[1])
+            x = ox + c * cell_size
+            y = oy + f * cell_size
+            text = font_small.render(str(h), True, (130, 130, 140))
+            tx = x + (cell_size - text.get_width()) // 2
+            ty = y + (cell_size - text.get_height()) // 2
+            screen.blit(text, (tx, ty))
+
+
+def _draw_tooltip(screen, font_small, mouse_pos, matriz, cell_size, ox, oy,
+                  explorados_list, camino, titulo, color_algo):
+    mx, my = mouse_pos
+    filas = len(matriz)
+    columnas = len(matriz[0])
+    grid_w = columnas * cell_size
+    grid_h = filas * cell_size
+    if mx < ox or mx >= ox + grid_w or my < oy or my >= oy + grid_h:
+        return
+    c = (mx - ox) // cell_size
+    f = (my - oy) // cell_size
+    if f >= filas or c >= columnas:
+        return
+    pos = (f, c)
+    nodo = matriz[f][c]
+    if not nodo.caminable:
+        return
+    meta = (filas - 1, columnas - 1)
+    h = abs(f - meta[0]) + abs(c - meta[1])
+    expl_set = set(explorados_list) if explorados_list else set()
+    path_set = set(camino) if camino else set()
+    partes = [f"h={h}"]
+    if pos in expl_set:
+        partes.append("explorado")
+    if pos in path_set:
+        partes.append("camino")
+    text = " | ".join(partes)
+    surf = font_small.render(f"{titulo}: {text}", True, (220, 220, 220))
+    pad = 5
+    tw, th = surf.get_size()
+    tx = min(mx + 12, screen.get_width() - tw - pad * 2 - 10)
+    ty = my - th - 10
+    if ty < 0:
+        ty = my + 12
+    bg = pygame.Rect(tx, ty, tw + pad * 2, th + pad * 2)
+    pygame.draw.rect(screen, (20, 20, 30), bg, border_radius=4)
+    pygame.draw.rect(screen, color_algo, bg, 1, border_radius=4)
+    screen.blit(surf, (tx + pad, ty + pad))
+
+
 def _draw_grid_at(screen, matriz, cell_size, ox, oy,
                   camino, explorados_list, revelados, paso_actual,
                   color_camino, color_explorados,
-                  zombie_sprite, raider_frames, frame_anim, raider_idle):
+                  zombie_sprite, raider_frames, frame_anim, raider_idle,
+                  heat_surf=None, font_small=None, mostrar_h=False):
     filas = len(matriz)
     columnas = len(matriz[0])
     ruta_set = set(camino) if camino else set()
     explorados_set = set(explorados_list[:revelados]) if explorados_list else set()
     meta_pos = (filas - 1, columnas - 1)
+    grid_w = columnas * cell_size
+    grid_h = filas * cell_size
+
+    if heat_surf:
+        screen.blit(heat_surf, (ox, oy))
+    else:
+        pygame.draw.rect(screen, COLOR_CELDA, (ox, oy, grid_w, grid_h))
+
+    if mostrar_h and font_small:
+        _dibujar_heuristicas(screen, font_small, matriz, cell_size, ox, oy)
+
+    overlay = pygame.Surface((grid_w, grid_h), pygame.SRCALPHA)
+    for pos in ruta_set:
+        pr = pygame.Rect(pos[1] * cell_size, pos[0] * cell_size, cell_size, cell_size)
+        pygame.draw.rect(overlay, (*color_camino, 160), pr)
+    for pos in explorados_set:
+        if pos not in ruta_set:
+            er = pygame.Rect(pos[1] * cell_size, pos[0] * cell_size, cell_size, cell_size)
+            pygame.draw.rect(overlay, (*color_explorados, 80), er)
+    screen.blit(overlay, (ox, oy))
 
     for f in range(filas):
         for c in range(columnas):
             x = ox + c * cell_size
             y = oy + f * cell_size
-            rect = pygame.Rect(x, y, cell_size, cell_size)
-            nodo = matriz[f][c]
             pos = (f, c)
-
-            pygame.draw.rect(screen, COLOR_CELDA, rect)
-
-            if pos in explorados_set and pos not in ruta_set:
-                pygame.draw.rect(screen, color_explorados, rect)
-
-            if pos in ruta_set:
-                pygame.draw.rect(screen, color_camino, rect)
+            nodo = matriz[f][c]
 
             if pos == meta_pos:
-                pygame.draw.rect(screen, COLOR_META, rect)
+                pygame.draw.rect(screen, COLOR_META, (x, y, cell_size, cell_size))
             elif pos == (0, 0):
-                pygame.draw.rect(screen, COLOR_INICIO, rect)
+                pygame.draw.rect(screen, COLOR_INICIO, (x, y, cell_size, cell_size))
 
-            pygame.draw.rect(screen, COLOR_REJILLA, rect, 1)
+            pygame.draw.rect(screen, COLOR_REJILLA, (x, y, cell_size, cell_size), 1)
 
             if not nodo.caminable:
-                screen.blit(zombie_sprite, rect)
+                screen.blit(zombie_sprite, (x, y))
 
     if camino and paso_actual < len(camino):
         pos = camino[paso_actual]
@@ -90,12 +184,14 @@ def _draw_grid_at(screen, matriz, cell_size, ox, oy,
 
 def draw_grid_normal(screen, matriz, cell_size,
                      camino, explorados_list, revelados, paso_actual,
-                     zombie_sprite, raider_frames, frame_anim, raider_idle):
+                     zombie_sprite, raider_frames, frame_anim, raider_idle,
+                     heat_surf=None, font_small=None):
     _draw_grid_at(
         screen, matriz, cell_size, MARGIN, MARGIN,
         camino, explorados_list, revelados, paso_actual,
         COLOR_CAMINO_ASTAR, COLOR_EXPLORADOS_ASTAR,
         zombie_sprite, raider_frames, frame_anim, raider_idle,
+        heat_surf, font_small, mostrar_h=True,
     )
 
 
@@ -104,7 +200,8 @@ def draw_comparison_view(screen, matriz, cell_size,
                          camino_b, expl_b, revelados_b, paso_b,
                          zombie_sprite, raider_frames, frame_anim_a,
                          frame_anim_b, raider_idle,
-                         font, font_bold, tiempo_a, tiempo_b):
+                         font, font_bold, tiempo_a, tiempo_b,
+                         heat_surf=None, font_small=None, mouse_pos=None):
     filas = len(matriz)
     columnas = len(matriz[0])
     grid_w = columnas * cell_size
@@ -121,6 +218,7 @@ def draw_comparison_view(screen, matriz, cell_size,
         camino_a, expl_a, revelados_a, paso_a,
         COLOR_CAMINO_ASTAR, COLOR_EXPLORADOS_ASTAR,
         zombie_sprite, raider_frames, frame_anim_a, raider_idle,
+        heat_surf,
     )
 
     if revelados_a < len(expl_a):
@@ -141,6 +239,7 @@ def draw_comparison_view(screen, matriz, cell_size,
         camino_b, expl_b, revelados_b, paso_b,
         COLOR_CAMINO_BFS, COLOR_EXPLORADOS_BFS,
         zombie_sprite, raider_frames, frame_anim_b, raider_idle,
+        heat_surf,
     )
 
     if revelados_b < len(expl_b):
@@ -155,6 +254,12 @@ def draw_comparison_view(screen, matriz, cell_size,
                   camino_a, expl_a, tiempo_a,
                   camino_b, expl_b, tiempo_b,
                   oy + grid_h + 28, columnas, cell_size)
+
+    if font_small and mouse_pos:
+        _draw_tooltip(screen, font_small, mouse_pos, matriz, cell_size, ox, oy,
+                      expl_a, camino_a, "A*", COLOR_CAMINO_ASTAR)
+        _draw_tooltip(screen, font_small, mouse_pos, matriz, cell_size, ox2, oy,
+                      expl_b, camino_b, "BFS", COLOR_CAMINO_BFS)
 
 
 def _draw_metrics(screen, font, font_bold,
