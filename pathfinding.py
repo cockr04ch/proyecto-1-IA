@@ -2,7 +2,12 @@ import random
 
 
 class Nodo:
+    """Representa una celda individual dentro de la cuadricula del mapa."""
+
     def __init__(self, fila, columna):
+        """Inicializa un nodo con su posicion (fila, columna) y los atributos
+        necesarios para los algoritmos de busqueda: g (coste real), h (heuristica),
+        f (coste total), padre (rastro del camino) y caminable (true si no es obstaculo)."""
         self.fila = fila
         self.columna = columna
         self.posicion = (fila, columna)
@@ -14,14 +19,21 @@ class Nodo:
 
 
 def heuristica(nodo, meta_pos):
+    """Distancia Manhattan entre un nodo y la posicion meta.
+    Se usa como heuristica admisible en A*."""
     return abs(nodo.fila - meta_pos[0]) + abs(nodo.columna - meta_pos[1])
 
 
 def crear_matriz(filas, columnas):
+    """Crea una cuadricula de nodos con las dimensiones dadas.
+    Todos los nodos comienzan siendo caminables."""
     return [[Nodo(f, c) for c in range(columnas)] for f in range(filas)]
 
 
 def generar_obstaculos(matriz, inicio_pos, meta_pos):
+    """Asigna el 30% de las celdas como no caminables de forma aleatoria.
+    Garantiza que la casilla de inicio, la meta y sus cuatro vecinos
+    inmediatos permanezcan caminables."""
     filas = len(matriz)
     columnas = len(matriz[0])
     for i in range(filas):
@@ -40,6 +52,8 @@ def generar_obstaculos(matriz, inicio_pos, meta_pos):
 
 
 def reset_nodos(matriz):
+    """Reinicia los valores de busqueda (padre, g, h, f) de todos los nodos
+    sin modificar su estado caminable. Util antes de re-ejecutar un algoritmo."""
     for fila in matriz:
         for nodo in fila:
             nodo.padre = None
@@ -49,6 +63,11 @@ def reset_nodos(matriz):
 
 
 def mapeo(matriz, inicio_pos, meta_pos):
+    """Algoritmo A* (A-Star). Busca el camino de menor coste desde inicio_pos
+    hasta meta_pos usando la heuristica Manhattan. Retorna una tupla
+    (camino, explorados): camino es la lista de posiciones ordenada desde
+    inicio a meta, y explorados la lista de todos los nodos evaluados.
+    Si no existe camino factible, retorna (None, explorados)."""
     filas = len(matriz)
     columnas = len(matriz[0])
     inicio = matriz[inicio_pos[0]][inicio_pos[1]]
@@ -108,6 +127,9 @@ def mapeo(matriz, inicio_pos, meta_pos):
 
 
 def mapeo_bfs(matriz, inicio_pos, meta_pos):
+    """Algoritmo BFS (Breadth-First Search). Busca el camino desde inicio_pos
+    hasta meta_pos explorando por niveles (anchura). Retorna una tupla
+    (camino, explorados). Si no existe camino factible, retorna (None, explorados)."""
     filas = len(matriz)
     columnas = len(matriz[0])
     inicio = matriz[inicio_pos[0]][inicio_pos[1]]

@@ -10,6 +10,8 @@ from config import (
 
 
 def init_pygame(ancho, alto):
+    """Inicializa Pygame, crea la ventana con las dimensiones dadas y retorna
+    los objetos fundamentales: pantalla, reloj (clock) y tres fuentes (normal, negrita y pequena)."""
     pygame.init()
     screen = pygame.display.set_mode((ancho, alto))
     pygame.display.set_caption("A* vs BFS Pathfinding - Zombie Survival")
@@ -21,6 +23,11 @@ def init_pygame(ancho, alto):
 
 
 def load_sprites(cell_size):
+    """Carga los sprites desde los archivos del proyecto:
+    - zombie_sprite: un solo fotograma del zombie (obstaculo).
+    - raider_frames: lista de 8 fotogramas de la animacion de caminar del personaje.
+    - raider_idle: un solo fotograma del personaje en reposo.
+    Todos se redimensionan al tamano de celda indicado."""
     zombie_sheet = pygame.image.load(
         "sprites/craftpix-net-556605-free-zombie-sprite-sheet-pack-pixel-art/Zombie Man/Idle.png"
     )
@@ -45,6 +52,8 @@ def load_sprites(cell_size):
 
 
 def _color_calor(dist, max_dist):
+    """Interpola entre un color base (frio) y un color calido segun la proporcion
+    dist/max_dist. Las celdas mas cercanas a la meta son mas calidas."""
     t = 1.0 - (dist / max_dist) if max_dist > 0 else 1.0
     base = (50, 50, 60)
     calido = (75, 55, 40)
@@ -55,6 +64,9 @@ def _color_calor(dist, max_dist):
 
 
 def crear_superficie_calor(filas, columnas, cell_size):
+    """Crea una superficie que representa un mapa de calor basado en la distancia
+    Manhattan de cada celda a la meta. Las celdas mas cercanas aparecen
+    con tonos mas calidos."""
     grid_w = columnas * cell_size
     grid_h = filas * cell_size
     superficie = pygame.Surface((grid_w, grid_h))
@@ -69,6 +81,8 @@ def crear_superficie_calor(filas, columnas, cell_size):
 
 
 def _dibujar_heuristicas(screen, font_small, matriz, cell_size, ox, oy):
+    """Dibuja el valor heuristico (distancia Manhattan a la meta) en el centro
+    de cada celda caminable. Se usa solo en modo Normal."""
     filas = len(matriz)
     columnas = len(matriz[0])
     meta = (filas - 1, columnas - 1)
@@ -87,6 +101,9 @@ def _dibujar_heuristicas(screen, font_small, matriz, cell_size, ox, oy):
 
 def _draw_tooltip(screen, font_small, mouse_pos, matriz, cell_size, ox, oy,
                   explorados_list, camino, titulo, color_algo):
+    """Muestra un tooltip al pasar el raton sobre una celda caminable,
+    indicando su valor heuristico y si pertenece a la lista de explorados
+    o al camino final. Solo visible en modo Comparacion."""
     mx, my = mouse_pos
     filas = len(matriz)
     columnas = len(matriz[0])
@@ -130,6 +147,12 @@ def _draw_grid_at(screen, matriz, cell_size, ox, oy,
                   color_camino, color_explorados,
                   zombie_sprite, raider_frames, frame_anim, raider_idle,
                   heat_surf=None, font_small=None, mostrar_h=False):
+    """Dibuja la cuadricula completa en una posicion (ox, oy):
+    - Fondo: mapa de calor (si se proporciona) o color de celda solido.
+    - Capa semitransparente para el camino y los explorados ya revelados.
+    - Celdas especiales: meta (dorado) e inicio (azul).
+    - Rejilla y sprites de zombie en obstaculos.
+    - Personaje animado (raider) sobre el paso actual del camino."""
     filas = len(matriz)
     columnas = len(matriz[0])
     ruta_set = set(camino) if camino else set()
@@ -186,6 +209,9 @@ def draw_grid_normal(screen, matriz, cell_size,
                      camino, explorados_list, revelados, paso_actual,
                      zombie_sprite, raider_frames, frame_anim, raider_idle,
                      heat_surf=None, font_small=None):
+    """Wrapper para dibujar la cuadricula en modo Normal.
+    Posiciona la cuadricula en (MARGIN, MARGIN) con colores de A*
+    y muestra los valores heuristicos en cada celda."""
     _draw_grid_at(
         screen, matriz, cell_size, MARGIN, MARGIN,
         camino, explorados_list, revelados, paso_actual,
@@ -202,6 +228,11 @@ def draw_comparison_view(screen, matriz, cell_size,
                          frame_anim_b, raider_idle,
                          font, font_bold, tiempo_a, tiempo_b,
                          heat_surf=None, font_small=None, mouse_pos=None):
+    """Dibuja la vista de comparacion lado a lado:
+    - Cuadricula izquierda con A* y su etiqueta de estado.
+    - Cuadricula derecha con BFS y su etiqueta de estado.
+    - Panel de metricas debajo con pasos, explorados y tiempo de cada algoritmo.
+    - Tooltips informativos al pasar el raton sobre las celdas."""
     filas = len(matriz)
     columnas = len(matriz[0])
     grid_w = columnas * cell_size
@@ -265,6 +296,9 @@ def draw_comparison_view(screen, matriz, cell_size,
 def _draw_metrics(screen, font, font_bold,
                   camino_a, expl_a, tiempo_a,
                   camino_b, expl_b, tiempo_b, y, columnas, cell_size):
+    """Dibuja el panel comparativo de metricas debajo de las cuadriculas,
+    mostrando longitud del camino, numero de nodos explorados y tiempo
+    de ejecucion para A* y BFS."""
     grid_w = columnas * cell_size
     panel_w = grid_w * 2 + COMP_GAP
     panel_h = 115
@@ -303,6 +337,10 @@ def draw_sidebar(screen, font, mouse_pos,
                  modo_comparacion, sidebar_x, window_height,
                  revelados_astar, total_expl_astar,
                  revelados_bfs=None, total_expl_bfs=None):
+    """Dibuja el panel lateral (sidebar) con tres botones:
+    REGENERAR MAPA, REINICIAR y el toggle entre modo NORMAL y COMPARACION.
+    Muestra informacion del estado actual de la animacion (paso, explorados, tiempo)
+    segun el modo activo. Retorna los rectangulos de los botones para detectar clicks."""
     sx = sidebar_x
 
     pygame.draw.rect(screen, COLOR_SIDEBAR_BG, (sx, 0, SIDEBAR_WIDTH, window_height))

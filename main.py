@@ -21,6 +21,8 @@ from graphics import (
 
 
 def regenerar_mapa(matriz, inicio_pos, meta_pos):
+    """Reinicia todos los nodos a caminable y re-genera los obstaculos
+    aleatorios, garantizando que inicio y meta queden accesibles."""
     for fila in matriz:
         for nodo in fila:
             nodo.caminable = True
@@ -32,6 +34,8 @@ def regenerar_mapa(matriz, inicio_pos, meta_pos):
 
 
 def ejecutar_astar(matriz, inicio, meta):
+    """Ejecuta el algoritmo A* sobre la matriz y retorna el camino,
+    la lista de explorados y el tiempo de ejecucion en segundos."""
     t0 = time.perf_counter()
     camino, explorados = mapeo(matriz, inicio, meta)
     t = time.perf_counter() - t0
@@ -39,6 +43,8 @@ def ejecutar_astar(matriz, inicio, meta):
 
 
 def ejecutar_bfs(matriz, inicio, meta):
+    """Ejecuta el algoritmo BFS (busqueda en anchura) sobre la matriz
+    y retorna el camino, la lista de explorados y el tiempo de ejecucion."""
     t0 = time.perf_counter()
     camino, explorados = mapeo_bfs(matriz, inicio, meta)
     t = time.perf_counter() - t0
@@ -46,6 +52,9 @@ def ejecutar_bfs(matriz, inicio, meta):
 
 
 def calcular_batches(explorados_a, explorados_b, modo_comp):
+    """Calcula cuantos nodos revelar por fotograma para que la animacion
+    de exploracion dure ~3 segundos si hay mas de 100 explorados,
+    o ~1 segundo en caso contrario. En modo Normal solo se calcula batch_a."""
     total_a = len(explorados_a) if explorados_a else 0
     target = FPS * 3 if total_a > 100 else FPS * 1
     batch_a = max(1, total_a // target) if total_a else 0
@@ -59,6 +68,10 @@ def calcular_batches(explorados_a, explorados_b, modo_comp):
 
 
 def setup_normal():
+    """Configura el estado inicial del modo Normal:
+    crea la matriz 10x10, genera obstaculos, ejecuta A* y
+    genera el mapa de calor. Retorna matriz, camino, explorados,
+    tiempo y superficie de calor."""
     m = crear_matriz(NORMAL_FILAS, NORMAL_COLUMNAS)
     generar_obstaculos(m, NORMAL_INICIO, NORMAL_META)
     c, e, t = ejecutar_astar(m, NORMAL_INICIO, NORMAL_META)
@@ -67,6 +80,10 @@ def setup_normal():
 
 
 def setup_comparacion():
+    """Configura el estado inicial del modo Comparacion:
+    crea dos matrices identicas de 40x40 (una para A* y otra para BFS),
+    ejecuta ambos algoritmos sobre el mismo mapa y genera el mapa de calor.
+    Retorna matriz, caminos, explorados, tiempos y superficie de calor."""
     m_astar = crear_matriz(COMP_FILAS, COMP_COLUMNAS)
     generar_obstaculos(m_astar, COMP_INICIO, COMP_META)
 
@@ -83,6 +100,10 @@ def setup_comparacion():
 
 
 def main():
+    """Bucle principal de la aplicacion.
+    Gestiona dos modos (Normal y Comparacion), la animacion progresiva
+    de exploracion de nodos, el desplazamiento del personaje sobre el camino,
+    los eventos de raton (clic en botones) y el renderizado de cada fotograma."""
     modo_comparacion = False
     cell_size = NORMAL_CELL_SIZE
     ancho = NORMAL_WINDOW_WIDTH

@@ -1,3 +1,4 @@
+# Constantes del modo NORMAL (10x10, A* individual)
 NORMAL_FILAS = 10
 NORMAL_COLUMNAS = 10
 NORMAL_CELL_SIZE = 64
@@ -8,6 +9,7 @@ NORMAL_WINDOW_HEIGHT = NORMAL_GRID + 80
 NORMAL_META = (9, 9)
 NORMAL_INICIO = (0, 0)
 
+# Constantes del modo COMPARACION (40x40, A* y BFS lado a lado)
 COMP_FILAS = 40
 COMP_COLUMNAS = 40
 COMP_CELL_SIZE = 14
@@ -19,14 +21,16 @@ COMP_WINDOW_HEIGHT = COMP_GRID + 40 + 140
 COMP_META = (39, 39)
 COMP_INICIO = (0, 0)
 
+# Constantes compartidas entre ambos modos
 SIDEBAR_WIDTH = 220
 BOTON_ANCHO = SIDEBAR_WIDTH - 30
 BOTON_ALTO = 44
 MARGIN = 40
-VELOCIDAD = 2
+VELOCIDAD = 2          # Pasos por segundo del personaje
 FPS = 60
-FRAMES_POR_PASO = FPS // VELOCIDAD
+FRAMES_POR_PASO = FPS // VELOCIDAD  # Cuadros de animacion entre cada paso
 
+# Paleta de colores del escenario y rejilla
 COLOR_FONDO = (30, 30, 40)
 COLOR_CELDA = (50, 50, 60)
 COLOR_CAMINO_ASTAR = (80, 200, 80)
@@ -38,6 +42,7 @@ COLOR_INICIO = (0, 150, 255)
 COLOR_REJILLA = (60, 60, 70)
 COLOR_PANEL = (35, 35, 45)
 
+# Paleta de colores del panel lateral (sidebar)
 COLOR_SIDEBAR_BG = (28, 28, 38)
 COLOR_BOTON = (55, 55, 75)
 COLOR_BOTON_HOVER = (80, 80, 110)
